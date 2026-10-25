@@ -1,189 +1,191 @@
-# Servidor do Knights
+# Knights Server
 
-Servidor mínimo que emula o backend do cliente Flash do jogo *Knights*. Serve os arquivos recuperados do jogo (CDN), responde ao gateway assinado do cliente e persiste o estado dos jogadores.
+🇺🇸 English · 🇧🇷 [Português](./README.pt-br.md)
 
-Construído sobre o template `backend-simple-app` (NestJS 11, Prisma 7, SQLite). O protocolo está documentado em `../recovery/PROTOCOLO.md`.
+Minimal server that emulates the backend of the *Knights* Flash game client. It serves the recovered game files (CDN), answers the client's signed gateway and persists player state.
 
-## Sumário
+Built on the `backend-simple-app` template (NestJS 11, Prisma 7, SQLite). The protocol is documented in `../recovery/PROTOCOLO.md`.
+
+## Table of contents
 
 - [Stack](#stack)
-- [Requisitos](#requisitos)
-- [Início rápido](#início-rápido)
-- [Variáveis de ambiente](#variáveis-de-ambiente)
+- [Requirements](#requirements)
+- [Quick start](#quick-start)
+- [Environment variables](#environment-variables)
 - [Endpoints](#endpoints)
-- [Abrir o cliente](#abrir-o-cliente)
-- [Estrutura do projeto](#estrutura-do-projeto)
-- [Banco de dados](#banco-de-dados)
+- [Opening the client](#opening-the-client)
+- [Project structure](#project-structure)
+- [Database](#database)
 - [Scripts](#scripts)
-- [Testes](#testes)
-- [Deploy com Docker](#deploy-com-docker)
-- [Estado atual](#estado-atual)
+- [Tests](#tests)
+- [Docker deployment](#docker-deployment)
+- [Current status](#current-status)
 
 ## Stack
 
 - **Framework:** NestJS 11 (Express), TypeScript
-- **Banco:** Prisma 7 com SQLite (`better-sqlite3`); PostgreSQL opcional
-- **Segurança:** Helmet, CORS, rate limit (`@nestjs/throttler`)
-- **Docs:** Swagger (apenas em desenvolvimento)
-- **Testes:** Jest + Supertest
+- **Database:** Prisma 7 with SQLite (`better-sqlite3`); PostgreSQL optional
+- **Security:** Helmet, CORS, rate limiting (`@nestjs/throttler`)
+- **Docs:** Swagger (development only)
+- **Tests:** Jest + Supertest
 
-## Requisitos
+## Requirements
 
 - Node.js 20+
 - npm
-- Arquivos recuperados do jogo em `../recovery/gameroom-cache`
+- Recovered game files in `../recovery/gameroom-cache`
 
-## Início rápido
+## Quick start
 
 ```bash
 npm install
-cp .env.example .env     # ajuste os valores, principalmente os segredos
+cp .env.example .env     # adjust the values, especially the secrets
 npm run db:generate
 npm run db:migrate
 npm run dev
 ```
 
-O servidor sobe na porta **3003**. Em desenvolvimento, o Swagger fica em <http://localhost:3003/docs> (`npm run open-docs`).
+The server listens on port **3003**. In development, Swagger is available at <http://localhost:3003/docs> (`npm run open-docs`).
 
-Na subida, o servidor calcula o md5 de cada arquivo de `GAME_CACHE_DIR` e cruza com o manifesto. O log mostra quantos dos 18.529 recursos ele consegue servir.
+On startup the server computes the md5 of every file in `GAME_CACHE_DIR` and matches it against the manifest. The log shows how many of the 18,529 resources it can serve.
 
-## Variáveis de ambiente
+## Environment variables
 
-Use `.env.example` como base. Troque todos os segredos antes de expor o servidor.
+Use `.env.example` as a base. Change every secret before exposing the server.
 
-| Variável | Descrição |
+| Variable | Description |
 |---|---|
-| `DATABASE_URL` | Conexão do banco. SQLite: `file:./prisma/dev.db`. PostgreSQL: `postgresql://user:pass@host:5432/db?schema=public` |
-| `JWT_PRIVATE_KEY` | Chave de assinatura dos JWT |
-| `ACCESS_SIGN_EXPIRES_IN` / `REFRESH_SIGN_EXPIRES_IN` | Validade dos tokens de acesso e refresh (ex.: `7d`, `30d`) |
-| `BCRYPT_SALT_ROUNDS` | Rounds do bcrypt para senhas |
-| `ENCRYPTION_ALGORITHM` / `ENCRYPTION_KEY` / `ENCRYPTION_IV` | Parâmetros da criptografia de dados |
-| `ADMIN_DEFAULT_*` | Usuário admin criado pelo seed (`USERNAME`, `EMAIL`, `API_KEY`, `NAME`, `PASSWORD`) |
-| `GAME_CACHE_DIR` | Pasta com os arquivos recuperados (`../recovery/gameroom-cache`) |
-| `GAME_SWF_FILE` | Arquivo do cliente SWF dentro do cache (`f_0000a9`) |
-| `GAME_MANIFEST_FILE` | Arquivo do manifesto de recursos (`f_0000aa`) |
-| `GAME_BUILD_SECRET` | Segredo usado na assinatura (`crc!json`) do gateway |
+| `DATABASE_URL` | Database connection. SQLite: `file:./prisma/dev.db`. PostgreSQL: `postgresql://user:pass@host:5432/db?schema=public` |
+| `JWT_PRIVATE_KEY` | JWT signing key |
+| `ACCESS_SIGN_EXPIRES_IN` / `REFRESH_SIGN_EXPIRES_IN` | Access and refresh token lifetimes (e.g. `7d`, `30d`) |
+| `BCRYPT_SALT_ROUNDS` | bcrypt rounds for passwords |
+| `ENCRYPTION_ALGORITHM` / `ENCRYPTION_KEY` / `ENCRYPTION_IV` | Data encryption parameters |
+| `ADMIN_DEFAULT_*` | Admin user created by the seed (`USERNAME`, `EMAIL`, `API_KEY`, `NAME`, `PASSWORD`) |
+| `GAME_CACHE_DIR` | Folder with the recovered files (`../recovery/gameroom-cache`) |
+| `GAME_SWF_FILE` | Client SWF file inside the cache (`f_0000a9`) |
+| `GAME_MANIFEST_FILE` | Resource manifest file (`f_0000aa`) |
+| `GAME_BUILD_SECRET` | Secret used for the gateway signature (`crc!json`) |
 
-> Em Docker, o caminho do SQLite é `file:./prisma/dev.db`; localmente, fora do Docker, pode ser necessário `file:../prisma/dev.db`.
+> In Docker the SQLite path is `file:./prisma/dev.db`; locally, outside Docker, you may need `file:../prisma/dev.db`.
 
 ## Endpoints
 
-| Rota | Função |
+| Route | Purpose |
 |---|---|
-| `GET /current/get_launch_info.php` | Versão do cliente (`1703`), idioma (`Portuguese`) e `isNewPlayer` |
-| `POST /current/json-gate.php` | Gateway assinado (`crc!json`): `initialize`, `doAction`, `doBatchAction` e demais tipos |
-| `GET /current/get_dummy.php`, `POST /current/track_visit.php`, `POST /current/statistics.php` | Respostas triviais |
-| `GET /cdn/:nome_md5` | Arquivos recuperados. `game_1703.swf` e `game_1703_Portuguese_files` são mapeados para o cliente e o manifesto |
-| `GET /cdn-stats` | Quantos recursos existem entre os que o manifesto lista |
-| `GET /crossdomain.xml` | Política aberta para o Flash |
+| `GET /current/get_launch_info.php` | Client version (`1703`), language (`Portuguese`) and `isNewPlayer` |
+| `POST /current/json-gate.php` | Signed gateway (`crc!json`): `initialize`, `doAction`, `doBatchAction` and the other types |
+| `GET /current/get_dummy.php`, `POST /current/track_visit.php`, `POST /current/statistics.php` | Trivial responses |
+| `GET /cdn/:name_md5` | Recovered files. `game_1703.swf` and `game_1703_Portuguese_files` are mapped to the client and the manifest |
+| `GET /cdn-stats` | How many resources exist out of those listed in the manifest |
+| `GET /crossdomain.xml` | Open policy for Flash |
 
-As rotas do jogo ignoram o limite de requisições (`SkipAllThrottle`), porque o cliente faz várias chamadas por segundo. As demais seguem o limite global (3 req/s e 100 req/min).
+The game routes skip the rate limit (`SkipAllThrottle`) because the client makes several calls per second. The other routes follow the global limit (3 req/s and 100 req/min).
 
-### Tipos do gateway
+### Gateway types
 
-| Tipo | Comportamento |
+| Type | Behavior |
 |---|---|
-| `initialize` | Cria ou recupera o jogador, renova a `sessionKey` e devolve o estado completo |
-| `doAction` | Executa `syncPlayer`/`refresh` e `saveSettings`; outros métodos viram log |
-| `doBatchAction` | Executa várias `doAction` em sequência |
-| `friendsGetInfo` | Lista vazia de amigos |
-| `doFriendAction`, `doClanAction`, `globalMap` | Não implementados: respondem `{}` |
-| `breakMeCompletely` | Remove o jogador |
+| `initialize` | Creates or loads the player, renews the `sessionKey` and returns the full state |
+| `doAction` | Runs `syncPlayer`/`refresh` and `saveSettings`; other methods are only logged |
+| `doBatchAction` | Runs several `doAction` calls in sequence |
+| `friendsGetInfo` | Empty friends list |
+| `doFriendAction`, `doClanAction`, `globalMap` | Not implemented: respond `{}` |
+| `breakMeCompletely` | Removes the player |
 
-Erros do gateway: `#PLAYER_NOT_FOUND`, `#INVALID_SESSION` e `#UNKNOWN_MESSAGE_TYPE`.
+Gateway errors: `#PLAYER_NOT_FOUND`, `#INVALID_SESSION` and `#UNKNOWN_MESSAGE_TYPE`.
 
-## Abrir o cliente
+## Opening the client
 
-O cliente lê os parâmetros da página (flashvars). Valores para apontar para este servidor:
+The client reads the page parameters (flashvars). Values to point it at this server:
 
-| Parâmetro | Valor |
+| Parameter | Value |
 |---|---|
 | `server` | `http://localhost:3003/current/` |
 | `cdn` | `http://localhost:3003/cdn/` |
 | `platform` | `sandbox` |
-| `userID` | Qualquer número, ex.: `1001` |
+| `userID` | Any number, e.g. `1001` |
 
-O jogo usa Stage3D, que o Ruffle não implementa. É preciso o Flash Player standalone (projector), que aceita os parâmetros na query:
+The game uses Stage3D, which Ruffle does not implement. You need the standalone Flash Player (projector), which accepts the parameters in the query string:
 
 ```
 flashplayer.exe "http://localhost:3003/cdn/game_1703.swf?server=http://localhost:3003/current/&cdn=http://localhost:3003/cdn/&platform=sandbox&userID=1001"
 ```
 
-## Estrutura do projeto
+## Project structure
 
 ```
 src/
 ├── main.ts              # bootstrap: body parser, helmet, CORS, Swagger (dev)
-├── app.module.ts        # módulos e throttler global
-├── gate/                # gateway json-gate.php: assinatura, ações, erros
-├── game-players/        # persistência e sessão dos jogadores
-├── launch/              # get_launch_info.php e rotas triviais
-├── cdn/                 # serve os arquivos recuperados e o manifesto
-├── auth/                # JWT, API key, login local, roles (template)
-├── users/               # CRUD de usuários (template)
-├── crypto/              # criptografia de dados
+├── app.module.ts        # modules and global throttler
+├── gate/                # json-gate.php gateway: signature, actions, errors
+├── game-players/        # player persistence and session
+├── launch/              # get_launch_info.php and trivial routes
+├── cdn/                 # serves the recovered files and the manifest
+├── auth/                # JWT, API key, local login, roles (template)
+├── users/               # user CRUD (template)
+├── crypto/              # data encryption
 ├── prisma/              # PrismaService
 ├── common/              # decorators, guards, pipes
-├── helpers/             # config, mensagens, regex
-├── utils/               # CRC32, geração de API key e username
-└── generated/prisma/    # cliente Prisma gerado (não editar)
-prisma/                  # schema, migrations e seed
-test/                    # testes e2e do jogo
+├── helpers/             # config, messages, regex
+├── utils/               # CRC32, API key and username generation
+└── generated/prisma/    # generated Prisma client (do not edit)
+prisma/                  # schema, migrations and seed
+test/                    # game e2e tests
 ```
 
-## Banco de dados
+## Database
 
-Modelos principais (`prisma/schema.prisma`):
+Main models (`prisma/schema.prisma`):
 
-- **`User`**: usuários da API administrativa (`ADMIN` | `USER`), com e-mail, username, API key e senha.
-- **`GamePlayer`**: jogador do jogo, identificado por `platformId` (o `userID` do cliente), com `sessionKey` e `state` em JSON (recursos, nível, configurações etc.).
+- **`User`**: users of the admin API (`ADMIN` | `USER`), with email, username, API key and password.
+- **`GamePlayer`**: game player identified by `platformId` (the client's `userID`), with a `sessionKey` and a JSON `state` (resources, level, settings, etc.).
 
-Comandos:
+Commands:
 
 ```bash
-npm run db:generate   # gera o cliente Prisma em src/generated/prisma
-npm run db:migrate    # aplica migrations (dev)
-npm run db:studio     # interface visual
-npm run db:seed       # cria o admin padrão
+npm run db:generate   # generates the Prisma client in src/generated/prisma
+npm run db:migrate    # applies migrations (dev)
+npm run db:studio     # visual interface
+npm run db:seed       # creates the default admin
 ```
 
-Para usar PostgreSQL, troque o `provider` em `prisma/schema.prisma` para `postgresql` e ajuste `DATABASE_URL`.
+To use PostgreSQL, change the `provider` in `prisma/schema.prisma` to `postgresql` and adjust `DATABASE_URL`.
 
 ## Scripts
 
-| Script | Descrição |
+| Script | Description |
 |---|---|
-| `npm run dev` / `start:dev` | Modo watch |
-| `npm run start` | Inicia sem watch |
-| `npm run start:prod` | Roda o build (`node dist/main`) |
-| `npm run build` | Compila para `dist/` |
-| `npm run lint` | ESLint com correção automática |
-| `npm run format` | Prettier |
+| `npm run dev` / `start:dev` | Watch mode |
+| `npm run start` | Start without watch |
+| `npm run start:prod` | Run the build (`node dist/main`) |
+| `npm run build` | Compile to `dist/` |
+| `npm run format` / `format:check` | Prettier (write / check) |
+| `npm run lint` | ESLint with auto-fix |
 
-## Testes
+## Tests
 
 ```bash
-npm run test        # unitários (inclui CRC32)
-npm run test:e2e    # transporte, sessão, batch e CDN
-npm run test:cov    # cobertura
+npm run test        # unit tests (includes CRC32)
+npm run test:e2e    # transport, session, batch and CDN
+npm run test:cov    # coverage
 ```
 
-Os testes simulam o cliente usando a mesma assinatura do código decompilado.
+The tests simulate the client using the same signature as the decompiled code. The e2e tests need the recovered files from `../recovery`, so they do not run in CI; the GitHub Actions workflow runs formatting, build and unit tests.
 
-## Deploy com Docker
+## Docker deployment
 
 ```bash
 cp .env.example .env
 docker-compose up -d --build
 ```
 
-Sobe a API na porta `3003` com o SQLite persistido em `./prisma` (volume). O `docker-compose.yml` traz um bloco comentado para PostgreSQL.
+This starts the API on port `3003` with SQLite persisted in `./prisma` (volume). `docker-compose.yml` includes a commented-out PostgreSQL block.
 
-O container precisa enxergar `GAME_CACHE_DIR`. Monte a pasta de arquivos recuperados como volume e ajuste o caminho no `.env`.
+The container must be able to see `GAME_CACHE_DIR`. Mount the recovered files folder as a volume and adjust the path in `.env`.
 
-## Estado atual
+## Current status
 
-- **Implementado:** transporte assinado, `initialize` (jogador novo com recursos iniciais), `syncPlayer`/`refresh`, `saveSettings`, lote de ações, sessão por jogador e persistência em SQLite.
-- **Modo descoberta:** qualquer outra ação responde `{}` e registra no log `Ação não implementada: doAction.<nome> <dados>`. Ao rodar o cliente, isso mostra quais ações ele realmente chama e com quais parâmetros.
-- **Valores iniciais** (`configHelper.game.startingState`) e `maxSceneId` (100000) são estimativas, porque o balanceamento original não existe no cliente.
-- **Não testado com o cliente real.**
+- **Implemented:** signed transport, `initialize` (new player with starting resources), `syncPlayer`/`refresh`, `saveSettings`, batch actions, per-player session and SQLite persistence.
+- **Discovery mode:** any other action responds `{}` and logs `Action not implemented: doAction.<name> <data>`. Running the client shows which actions it really calls and with which parameters.
+- **Starting values** (`configHelper.game.startingState`) and `maxSceneId` (100000) are estimates, because the original balancing does not exist in the client.
+- **Not tested with the real client.**
