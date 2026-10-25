@@ -1,0 +1,50 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+    provider     = "prisma-client"
+    moduleFormat = "cjs"
+    output       = "../src/generated/prisma"
+}
+
+datasource db {
+    // Para SQLite (Padrão)
+    provider = "sqlite"
+
+    // Para PostgreSQL (Comente o SQLite acima e descomente abaixo)
+    // provider = "postgresql"
+}
+
+enum UserRole {
+    ADMIN
+    USER
+}
+
+model User {
+    id        String    @id @default(uuid())
+    createdAt DateTime  @default(now()) @map("created_at")
+    updatedAt DateTime? @updatedAt @map("updated_at")
+    name      String
+    role      UserRole  @default(USER)
+    email     String    @unique
+    username  String    @unique
+    apiKey    String    @unique @map("api_key")
+    password  String
+
+    @@map("users")
+}
+
+model GamePlayer {
+    id         Int      @id @default(autoincrement())
+    createdAt  DateTime @default(now()) @map("created_at")
+    updatedAt  DateTime @updatedAt @map("updated_at")
+    platformId String   @unique @map("platform_id")
+    name       String
+    sessionKey String   @map("session_key")
+    state      Json
+
+    @@map("game_players")
+}
