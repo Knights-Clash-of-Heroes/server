@@ -108,7 +108,7 @@ function parseSignedResponse(playerId: string, requestSig: string, text: string)
     return JSON.parse(body) as Record<string, any>
 }
 
-describe("Servidor do jogo (e2e)", () => {
+describe("Game server (e2e)", () => {
     let app: INestApplication<App>
     const playerId = "100001234567890"
 
@@ -129,7 +129,7 @@ describe("Servidor do jogo (e2e)", () => {
         await app.close()
     })
 
-    it("get_launch_info.php informa a versão do cliente e jogador novo", async () => {
+    it("get_launch_info.php reports the client version and new player", async () => {
         const response = await request(app.getHttpServer())
             .get("/current/get_launch_info.php")
             .query({ player_id: playerId, rsig: "123" })
@@ -144,7 +144,7 @@ describe("Servidor do jogo (e2e)", () => {
         })
     })
 
-    it("rejeita requisição com assinatura inválida e assina o erro", async () => {
+    it("rejects a request with an invalid signature and signs the error", async () => {
         const { body, sig } = buildGateBody(playerId, "initialize", {})
         const response = await request(app.getHttpServer())
             .post("/current/json-gate.php")
@@ -158,7 +158,7 @@ describe("Servidor do jogo (e2e)", () => {
         expect(sig).not.toBe("1")
     })
 
-    it("initialize cria o jogador e devolve o estado assinado", async () => {
+    it("initialize creates the player and returns the signed state", async () => {
         const { body, sig } = buildGateBody(playerId, "initialize", {
             authType: "social",
             authKey: "qualquer",
@@ -182,7 +182,7 @@ describe("Servidor do jogo (e2e)", () => {
         expect(parsed.quests).toEqual({ active: {}, completed: {}, failed: {}, order: [] })
     })
 
-    it("aceita doAction com a sessão correta e recusa sessão errada", async () => {
+    it("accepts doAction with the correct session and rejects a wrong session", async () => {
         const init = buildGateBody(playerId, "initialize", { userName: "Arthur Pendragon" })
         const initResponse = parseSignedResponse(
             playerId,
@@ -212,7 +212,7 @@ describe("Servidor do jogo (e2e)", () => {
         expect(parseSignedResponse(playerId, bad.sig, badResponse.text).error).toBe("#INVALID_SESSION")
     })
 
-    it("doBatchAction responde cada item com a mesma chave", async () => {
+    it("doBatchAction answers each item with the same key", async () => {
         const init = buildGateBody(playerId, "initialize", {})
         const initResponse = parseSignedResponse(
             playerId,
@@ -237,7 +237,7 @@ describe("Servidor do jogo (e2e)", () => {
         expect(parsed.batchResponse["1"]).toEqual({})
     })
 
-    it("recusa comando sem o prefixo Knights.", async () => {
+    it("rejects a command without the Knights. prefix", async () => {
         const cmd = "Outro.initialize"
         const json = "{}"
         const sig = String(crc32(playerId + cmd + json))

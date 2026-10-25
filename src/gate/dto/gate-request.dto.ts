@@ -2,28 +2,28 @@ import { IsNotEmpty, IsNumberString, IsOptional, IsString, MaxLength } from "cla
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
 
 export class GateRequestDto {
-    @ApiProperty({ example: "Knights.initialize", description: "Prefixo Knights. seguido do tipo da mensagem" })
+    @ApiProperty({ example: "Knights.initialize", description: "Knights. prefix followed by the message type" })
     @IsString()
     @IsNotEmpty()
     @MaxLength(64)
     cmd!: string
 
-    @ApiProperty({ description: "ID do jogador na rede social" })
+    @ApiProperty({ description: "Player ID on the social network" })
     @IsString()
     @IsNotEmpty()
     @MaxLength(64)
     pid!: string
 
-    @ApiPropertyOptional({ description: "ID do jogo (player_id devolvido pelo initialize)" })
+    @ApiPropertyOptional({ description: "Game ID (player_id returned by initialize)" })
     @IsOptional()
     @IsNumberString()
     gid?: string
 
-    @ApiProperty({ description: "CRC32 decimal de pid + cmd + data" })
+    @ApiProperty({ description: "Decimal CRC32 of pid + cmd + data" })
     @IsNumberString()
     sig!: string
 
-    @ApiProperty({ description: "Corpo da mensagem em JSON" })
+    @ApiProperty({ description: "Message body as JSON" })
     @IsString()
     @IsNotEmpty()
     data!: string

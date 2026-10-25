@@ -12,7 +12,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     constructor() {
         const url = env("DATABASE_URL")
 
-        // Para SQLite (Padrão)
+        // For SQLite (Default)
         const adapter = new PrismaBetterSqlite3({ url })
 
         // Para PostgreSQL (Descomente abaixo e comente o SQLite acima)

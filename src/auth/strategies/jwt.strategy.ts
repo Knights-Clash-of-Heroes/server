@@ -16,7 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
     }
 
     validate(payload: JwtAccessPayload) {
-        // O refresh token é assinado com o mesmo segredo: só access tokens podem ser aceitos aqui.
+        // The refresh token is signed with the same secret: only access tokens may be accepted here.
         if (payload.type !== "access") {
             throw new UnauthorizedException(messagesHelper.INVALID_AUTHORIZATION_TOKEN)
         }

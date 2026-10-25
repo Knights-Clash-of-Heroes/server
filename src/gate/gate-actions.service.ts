@@ -42,7 +42,7 @@ export class GateActionsService {
     }
 
     private async initialize(platformId: string, data: ActionData): Promise<ActionResult> {
-        const userName = typeof data.userName === "string" && data.userName ? data.userName : `Jogador ${platformId}`
+        const userName = typeof data.userName === "string" && data.userName ? data.userName : `Player ${platformId}`
         const { player: found, created } = await this.gamePlayersService.findOrCreate(platformId, userName)
         const player = await this.gamePlayersService.renewSession(found)
 
@@ -165,6 +165,6 @@ export class GateActionsService {
     }
 
     private logNotImplemented(name: string, data: ActionData) {
-        this.logger.warn(`Ação não implementada: ${name} ${JSON.stringify(data)}`)
+        this.logger.warn(`Action not implemented: ${name} ${JSON.stringify(data)}`)
     }
 }

@@ -58,7 +58,7 @@ export class UsersService {
             omit: sensitiveFields,
         })
 
-        // A API key em texto puro só é exibida uma vez, na criação (no banco ela fica criptografada).
+        // The plain-text API key is only shown once, on creation (it is stored encrypted in the database).
         return {
             ...user,
             apiKey: generatedApiKey,
@@ -142,7 +142,7 @@ export class UsersService {
         const user = await this.safeFindOneByApiKey(apiKey)
 
         if (!user) {
-            // Não inclui a chave na mensagem para não ecoar segredos em respostas/logs.
+            // Does not include the key in the message to avoid echoing secrets in responses/logs.
             throw new NotFoundException(messagesHelper.INVALID_API_KEY)
         }
 

@@ -15,8 +15,8 @@ export class GateController {
     @Post("json-gate.php")
     @HttpCode(200)
     @Header("Content-Type", "text/plain; charset=utf-8")
-    @ApiOperation({ summary: "Gateway de mensagens do jogo, com resposta assinada no formato crc!json" })
-    @ApiResponse({ status: 200, description: "Texto no formato <crc>!<json>" })
+    @ApiOperation({ summary: "Game message gateway, with a signed response in the crc!json format" })
+    @ApiResponse({ status: 200, description: "Text in the <crc>!<json> format" })
     async handle(@Body() request: GateRequestDto) {
         return await this.gateService.handle(request)
     }

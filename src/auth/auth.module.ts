@@ -26,7 +26,7 @@ import { AuthService } from "./auth.service"
             inject: [ConfigService],
         }),
     ],
-    // JwtRefreshTokenStrategy não estava registrada: POST /auth/refresh-token sempre falhava
+    // JwtRefreshTokenStrategy was not registered: POST /auth/refresh-token always failed
     providers: [AuthService, LocalStrategy, JwtStrategy, ApiKeyStrategy, JwtRefreshTokenStrategy],
     controllers: [AuthController],
     exports: [AuthService],

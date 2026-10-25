@@ -45,7 +45,7 @@ export class GateService {
                 return { error: error.message }
             }
 
-            this.logger.error(`Falha em ${request.cmd}`, error instanceof Error ? error.stack : String(error))
+            this.logger.error(`Failure in ${request.cmd}`, error instanceof Error ? error.stack : String(error))
 
             return { error: "#SERVER_ERROR", errorLog: configHelper.isDevelopment ? String(error) : undefined }
         }

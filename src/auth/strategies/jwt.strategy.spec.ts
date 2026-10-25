@@ -18,7 +18,7 @@ describe("JwtStrategy", () => {
         ).toEqual({ id: "id", email: "user@email.com", role: "USER" })
     })
 
-    it("rejeita refresh tokens e tokens de reset de senha", () => {
+    it("rejects refresh tokens and password reset tokens", () => {
         expect(() => strategy.validate({ sub: "id", type: "refresh" } as any)).toThrow(UnauthorizedException)
         expect(() => strategy.validate({ sub: "a@b.com", type: "forgot_password" } as any)).toThrow(
             UnauthorizedException,

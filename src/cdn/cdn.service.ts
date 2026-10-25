@@ -41,7 +41,7 @@ export class CdnService implements OnModuleInit {
 
         if (!entry && !this.misses.has(fileName)) {
             this.misses.add(fileName)
-            this.logger.warn(`Recurso não recuperado: ${fileName}`)
+            this.logger.warn(`Resource not recovered: ${fileName}`)
         }
 
         return entry
@@ -75,7 +75,7 @@ export class CdnService implements OnModuleInit {
         const manifestContent = await fs.readFile(manifestPath).catch(() => null)
 
         if (!manifestContent) {
-            this.logger.error(`Manifesto não encontrado em ${manifestPath}`)
+            this.logger.error(`Manifest not found at ${manifestPath}`)
             return
         }
 
@@ -99,6 +99,6 @@ export class CdnService implements OnModuleInit {
             }
         }
 
-        this.logger.log(`CDN: ${this.entries.size} arquivos servidos de ${this.totalResources + 2} esperados`)
+        this.logger.log(`CDN: ${this.entries.size} files served out of ${this.totalResources + 2} expected`)
     }
 }
